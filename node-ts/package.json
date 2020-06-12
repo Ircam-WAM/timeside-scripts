@@ -1,0 +1,24 @@
+{
+  "name": "timeside-wasabi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^14.0.13",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.5"
+  },
+  "dependencies": {
+    "@ircam/timeside-sdk": "^2.1.2",
+    "@types/dotenv": "^8.2.0",
+    "dotenv": "^8.2.0",
+    "formdata-node": "^2.2.0",
+    "portable-fetch": "^3.0.0"
+  }
+}
