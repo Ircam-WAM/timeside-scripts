@@ -1,14 +1,11 @@
-import portableFetch from 'portable-fetch'
+import crossFetch from 'cross-fetch'
 import {
   TimesideApi,
-  Configuration,
-  AutoRefreshConfiguration,
-  InMemoryJWTToken,
-  JWTToken,
+  ServerSideConfiguration,
   Selection,
   Experience,
-  TaskStatusEnum,
-  ResultStatusEnum
+  TaskStatus,
+  Task,
 } from '@ircam/timeside-sdk'
 import { config as dotenv } from 'dotenv'
 import formDataNode from 'formdata-node'
@@ -22,49 +19,56 @@ global.FormData = formDataNode
 // Load environment variables from .env file
 dotenv()
 
+function mustGetEnv (envVar: string) {
+  const val = process.env[envVar]
+  if (!val) {
+    throw new Error(`Empty environment variable: ${envVar}`)
+  }
+  return val
+}
+
+const api = new TimesideApi(ServerSideConfiguration({
+  // Use sandbox endpoint
+  basePath: 'https://sandbox.wasabi.telemeta.org',
+  // Credentials (get from environment)
+  username: mustGetEnv('TIMESIDE_API_USER'),
+  password: mustGetEnv('TIMESIDE_API_PASS'),
+  // Use alternative fetch API (for Node / Polyfill)
+  fetchApi: crossFetch,
+}))
+
+// Defined from ./input.json
+interface Station {
+  title: string;
+  url: string;
+  name: string;
+  albumTitle: string;
+}
+
 // Hardcoded uuid / hyperlinks
 const PRESETS = {
   aubioPitch: '/timeside/api/presets/842d911f-7dc2-4922-b861-fa8a3e076f72/',
-  spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
+  // FIXME: spectrogram is broken on the API
+  // See https://github.com/Parisson/TimeSide/issues/200
+  // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
   meanDcPitch: '/timeside/api/presets/fe7a0c2c-57a8-4bf2-884c-b7a30f22a8dc/'
 }
 
-// Deezer preview Provider
-const PROVIDER_URL = '/timeside/api/providers/32dd516a-5759-43fd-bc95-3d08eebee196/'
-
-export const basePath = 'https://sandbox.wasabi.telemeta.org'
-
-const API_USER = process.env.TIMESIDE_API_USER
-if (!API_USER) {
-  throw new Error('Empty environment variable: TIMESIDE_API_USER')
-}
-const API_PASS = process.env.TIMESIDE_API_PASS
-if (!API_PASS) {
-  throw new Error('Empty environment variable: TIMESIDE_API_PASS')
+const PROVIDERS = {
+  YOUTUBE: '/timeside/api/providers/4f239dd8-c6fe-4888-b131-445b712f2b15/',
+  DEEZER: '/timeside/api/providers/32dd516a-5759-43fd-bc95-3d08eebee196/'
 }
 
-// This helper saves the JWTToken to window.localStorage
-// You may also implements your own way of storing your Token
-// by implementing the PersistentJWTToken interface
-export const persistentToken = new InMemoryJWTToken()
-persistentToken.init()
-
-const urlConfig = {
-  basePath,
-  // Use alternative fetch API (for Node / Polyfill)
-  fetchApi: portableFetch,
-}
-
-export const rawApi = new TimesideApi(new Configuration(urlConfig))
-
-// Configuration to auto-refresh token when needed
-const apiConfig = AutoRefreshConfiguration(urlConfig, persistentToken)
-const api = new TimesideApi(new Configuration(apiConfig))
-
-async function login () {
-  const tokenObtainPair = { username: API_USER, password: API_PASS }
-  const token = await rawApi.createTokenObtainPair({ tokenObtainPair })
-  persistentToken.token = JWTToken.fromBase64(token.access, token.refresh)
+// getProviderUri('https://www.youtube.com/watch?v=UBPI95GIbGg')
+// getProviderUri('http://www.deezer.com/track/4763165')
+function getProviderUrl(sourceUrl: string) {
+  const parsed = new URL(sourceUrl)
+  if (parsed.hostname === 'www.youtube.com') {
+    return PROVIDERS.YOUTUBE
+  } else if (parsed.hostname === 'www.deezer.com') {
+    return PROVIDERS.DEEZER
+  }
+  throw new Error('Unknown URL type (excpected deezer or youtube URL)')
 }
 
 async function getOrCreateWasabiSelection (): Promise<Selection> {
@@ -74,7 +78,7 @@ async function getOrCreateWasabiSelection (): Promise<Selection> {
   if (existing) {
     return existing
   }
-  let newSelection
+  let newSelection: Selection
   try {
     newSelection = await api.createSelection({ selection: { title: wasabiTitle } })
   } catch (e) {
@@ -92,7 +96,7 @@ async function getOrCreateWasabiExperience (): Promise<Experience> {
     return existing
   }
 
-  let newExperience
+  let newExperience: Experience
   try {
     newExperience = await api.createExperience({ experience: { title: wasabiTitle, presets: Object.values(PRESETS) } })
   } catch (e) {
@@ -102,43 +106,31 @@ async function getOrCreateWasabiExperience (): Promise<Experience> {
   return newExperience
 }
 
-const TaskStatus = {
-  Failed: TaskStatusEnum.NUMBER_0,
-  Draft:  TaskStatusEnum.NUMBER_1,
-  Pending: TaskStatusEnum.NUMBER_2,
-  Running: TaskStatusEnum.NUMBER_3,
-  Done: TaskStatusEnum.NUMBER_4
-}
-
-const ResultStatus = {
-  Failed: ResultStatusEnum.NUMBER_0,
-  Draft:  ResultStatusEnum.NUMBER_1,
-  Pending: ResultStatusEnum.NUMBER_2,
-  Running: ResultStatusEnum.NUMBER_3,
-  Done: ResultStatusEnum.NUMBER_4
-}
-
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 async function main() {
-  await login()
-
   const wasabiSelection = await getOrCreateWasabiSelection()
+  console.log(`[${new Date().toISOString()}] WASABI Selection: ${wasabiSelection.uuid}`)
+
   const wasabiExperience = await getOrCreateWasabiExperience()
+  console.log(`[${new Date().toISOString()}] WASABI Experience: ${wasabiExperience.uuid}`)
 
   const file = await fsPromises.readFile('input.json')
-  const stations = JSON.parse(file.toString())
+  const stations: Station[] = JSON.parse(file.toString())
 
+  console.log(`[${new Date().toISOString()}] Parsed ${stations.length} items. Importing...`)
+
+  // Create an array of promises to run tasks concurrently
   const promises = stations.map(async (station) => {
     // Create item
     const item = await api.createItem({
       item: {
         title: station.title,
         description: `Music from ${station.name} - ${station.albumTitle}`,
-        externalUri: station.urlDeezer,
-        provider: PROVIDER_URL
+        externalUri: station.url,
+        provider: getProviderUrl(station.url)
       }
     })
 
@@ -149,46 +141,55 @@ async function main() {
         items: [ `/timeside/api/items/${item.uuid}/` ]
       }
     })
-    // console.log('Selection updated', updatedSelection)
 
     // Create task
     const task = await api.createTask({
       task: {
         experience: `/timeside/api/experiences/${wasabiExperience.uuid}/`,
-        selection: `/timeside/api/selections/${wasabiSelection.uuid}/`,
+        selection: `/timeside/api/selections/${updatedSelection.uuid}/`,
         item: `/timeside/api/items/${item.uuid}/`,
         status: TaskStatus.Pending
       }
     })
-    // console.log('Task created', task)
 
-    // Wait until all results for the created item are done processing
+    console.log(`[${new Date().toISOString()}] Task created: ${task.uuid}`)
+
+    // Wait until all task is done
     const fibonacci = [ 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233 ]
     let isDone = false
     let iteration = 0
+    let lastTask: Task
     do {
-      const results = await api.listResults({ itemUuid: item.uuid })
-      const undoneResults = results.filter((r) => r.status !== ResultStatus.Done)
-      if (undoneResults.length === 0) {
-        console.log(`${results.length} results successfully processed`)
-        isDone = true
-      }
-      iteration++
-      await sleep(fibonacci[iteration])
-    } while (!isDone && iteration < 10)
+      lastTask = await api.retrieveTask({ uuid: task.uuid })
+      isDone = lastTask.status === TaskStatus.Done
 
+      // We could alternatively wait for every results
+      // for this item to be processed
+      // But this would raise issues for concurrent imports
+
+      // const results = await api.listResults({ itemUuid: item.uuid })
+      // const undoneResults = results.filter((r) => r.status !== ResultStatus.Done)
+      // if (undoneResults.length === 0) {
+      //   console.log(`${results.length} results successfully processed`)
+      //   isDone = true
+      // }
+
+      iteration++
+      await sleep(fibonacci[iteration] * 1000)
+    } while (!isDone && iteration < 10)
       if (iteration === 10 && !isDone) {
         console.error(`Unable to get result after ${iteration} iterations`)
         return
       }
 
-    console.log(`Item's player URL: https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`)
+    console.log(`[${new Date().toISOString()}] Task done: ${task.uuid}`)
+    console.log(`[${new Date().toISOString()}] Item's player URL: https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`)
   })
 
-  // Run all promises concurrently
+  // Wait for all promises to resolve
   await Promise.all(promises)
 
-  console.log(`Created ${stations.length} items`)
+  console.log(`[${new Date().toISOString()}] Created ${stations.length} items`)
   // You may want to list items
   // console.log(await api.listItems({}))
 }
