@@ -9,8 +9,9 @@ import {
 } from '@ircam/timeside-sdk'
 import { config as dotenv } from 'dotenv'
 import formDataNode from 'formdata-node'
+
+// Node library imports
 import { performance } from 'perf_hooks'
- 
 import { promises as fsPromises } from 'fs'
 
 // Polyfill FormData because SDK use `new FormData`
