@@ -47,6 +47,21 @@ interface Station {
   albumTitle: string;
 }
 
+function validateStation (station: Station) {
+  if (!station.title) {
+    throw new Error(`Invalid station: Empty title: ${JSON.stringify(station)}`)
+  }
+  if (!station.url) {
+    throw new Error(`Invalid station: Empty url: ${JSON.stringify(station)}`)
+  }
+  if (!station.name) {
+    throw new Error(`Invalid station: Empty name: ${JSON.stringify(station)}`)
+  }
+  if (!station.albumTitle) {
+    throw new Error(`Invalid station: Empty albumTitle: ${JSON.stringify(station)}`)
+  }
+}
+
 // Hardcoded uuid / hyperlinks
 const PRESETS = {
   aubioPitch: '/timeside/api/presets/842d911f-7dc2-4922-b861-fa8a3e076f72/',
@@ -54,9 +69,8 @@ const PRESETS = {
   // FIXME: spectrogram is broken on the API
   // See https://github.com/Parisson/TimeSide/issues/200
   // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
-  // FIXME:
-  // - flac breaks player for deezer items
-  // - flac is re-encoded when loading player on youtbe items
+  // FIXME: flac is re-encoded when loading player on youtbe items
+  // See https://github.com/Parisson/TimeSide/issues/205
   flacAubio: '/timeside/api/presets/d7df195a-f15e-4e1b-9678-8f64d379ac42/'
 }
 
@@ -146,10 +160,18 @@ async function main() {
   const file = await fsPromises.readFile('input.json')
   const stations: Station[] = JSON.parse(file.toString())
 
+  if (stations.length === 0) {
+    console.log('Unexpected empty station array (input.json). Leaving now')
+    return
+  }
+
   console.log(`[${new Date().toISOString()}] Parsed ${stations.length} items. Importing...`)
 
   // Create an array of promises to run tasks concurrently
   const promises = stations.map(async (station) => {
+    // Check station and throws if it fails
+    validateStation(station)
+
     // Create item
     const item = await api.createItem({
       item: {
@@ -213,7 +235,7 @@ async function main() {
     const t1 = performance.now()
     const taskRuntime = Math.round(t1 - t0) // in milliseconds
 
-    console.log(`[${new Date().toISOString()}] "${station.title}" - Task done: ${task.uuid} in ${taskRuntime}ms`)
+    console.log(`[${new Date().toISOString()}] "${station.title}" - Task done (${taskRuntime}ms) : ${task.uuid}`)
     console.log(`[${new Date().toISOString()}] "${station.title}" - Player URL: https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`)
   })
 
