@@ -50,8 +50,10 @@ interface Station {
 // Hardcoded uuid / hyperlinks
 const PRESETS = {
   aubioPitch: '/timeside/api/presets/842d911f-7dc2-4922-b861-fa8a3e076f72/',
-  spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
   meanDcPitch: '/timeside/api/presets/fe7a0c2c-57a8-4bf2-884c-b7a30f22a8dc/',
+  // FIXME: spectrogram is broken on the API
+  // See https://github.com/Parisson/TimeSide/issues/200
+  // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
   // FIXME:
   // - flac breaks player for deezer items
   // - flac is re-encoded when loading player on youtbe items
@@ -75,6 +77,11 @@ function getProviderUrl(sourceUrl: string) {
   throw new Error('Unknown URL type (excpected deezer or youtube URL)')
 }
 
+function compareArray (a: string[], b: string[]): boolean {
+  return a.length === b.length &&
+    a.every((val, idx) => val === b[idx])
+}
+
 async function getOrCreateWasabiSelection (): Promise<Selection> {
   const wasabiTitle = 'WASABI'
   const selections = await api.listSelections()
@@ -94,15 +101,30 @@ async function getOrCreateWasabiSelection (): Promise<Selection> {
 
 async function getOrCreateWasabiExperience (): Promise<Experience> {
   const wasabiTitle = 'WASABI_experience'
+  const experienceBody = {
+    title: wasabiTitle,
+    presets: Object.values(PRESETS)
+  }
+
   const experiences = await api.listExperiences()
   const existing = experiences.find((e) => e.title === wasabiTitle)
+
   if (existing) {
-    return existing
+    // Remove domain from URL for comparaison
+    const existingPresets = existing.presets.map(fullUrl => new URL(fullUrl).pathname)
+    const isSamePresets = compareArray(existingPresets, experienceBody.presets)
+    if (isSamePresets) {
+      return existing
+    }
+    return await api.updateExperience({
+      uuid: existing.uuid,
+      experience: experienceBody
+    })
   }
 
   let newExperience: Experience
   try {
-    newExperience = await api.createExperience({ experience: { title: wasabiTitle, presets: Object.values(PRESETS) } })
+    newExperience = await api.createExperience({ experience: experienceBody })
   } catch (e) {
     const resp = await e.json()
     throw new Error(`Unable to create experience: ${JSON.stringify(resp, null, 2)}`)
