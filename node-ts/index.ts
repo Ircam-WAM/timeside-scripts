@@ -9,7 +9,8 @@ import {
 } from '@ircam/timeside-sdk'
 import { config as dotenv } from 'dotenv'
 import formDataNode from 'formdata-node'
-
+import { performance } from 'perf_hooks'
+ 
 import { promises as fsPromises } from 'fs'
 
 // Polyfill FormData because SDK use `new FormData`
@@ -154,7 +155,9 @@ async function main() {
       }
     })
 
-    console.log(`[${new Date().toISOString()}] Task created: ${task.uuid}`)
+    const t0 = performance.now()
+
+    console.log(`[${new Date().toISOString()}] "${station.title}" - Task created: ${task.uuid}`)
 
     // Wait until all task is done
     const fibonacci = [ 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233 ]
@@ -184,8 +187,11 @@ async function main() {
         return
       }
 
-    console.log(`[${new Date().toISOString()}] Task done: ${task.uuid}`)
-    console.log(`[${new Date().toISOString()}] Item's player URL: https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`)
+    const t1 = performance.now()
+    const taskRuntime = Math.round(t1 - t0) // in milliseconds
+
+    console.log(`[${new Date().toISOString()}] "${station.title}" - Task done: ${task.uuid} in ${taskRuntime}ms`)
+    console.log(`[${new Date().toISOString()}] "${station.title}" - Player URL: https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`)
   })
 
   // Wait for all promises to resolve
