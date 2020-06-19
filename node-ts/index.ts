@@ -48,10 +48,12 @@ interface Station {
 // Hardcoded uuid / hyperlinks
 const PRESETS = {
   aubioPitch: '/timeside/api/presets/842d911f-7dc2-4922-b861-fa8a3e076f72/',
-  // FIXME: spectrogram is broken on the API
-  // See https://github.com/Parisson/TimeSide/issues/200
-  // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
-  meanDcPitch: '/timeside/api/presets/fe7a0c2c-57a8-4bf2-884c-b7a30f22a8dc/'
+  spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
+  meanDcPitch: '/timeside/api/presets/fe7a0c2c-57a8-4bf2-884c-b7a30f22a8dc/',
+  // FIXME:
+  // - flac breaks player for deezer items
+  // - flac is re-encoded when loading player on youtbe items
+  flacAubio: '/timeside/api/presets/d7df195a-f15e-4e1b-9678-8f64d379ac42/'
 }
 
 const PROVIDERS = {
