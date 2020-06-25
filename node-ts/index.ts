@@ -1,22 +1,32 @@
-import crossFetch from 'cross-fetch'
 import {
   TimesideApi,
   ServerSideConfiguration,
+  Item,
   Selection,
   Experience,
   TaskStatus,
   Task,
 } from '@ircam/timeside-sdk'
 import { config as dotenv } from 'dotenv'
-import formDataNode from 'formdata-node'
+import logger from './logger'
 
-// Node library imports
+// Node standard library imports
 import { performance } from 'perf_hooks'
-import { promises as fsPromises } from 'fs'
+import fs, { promises as fsPromises } from 'fs'
+import url from 'url'
+import path from 'path'
+
+// Node polyfill
+import crossFetch from 'cross-fetch'
+import formData from 'form-data'
+import fetchBlob from 'fetch-blob'
 
 // Polyfill FormData because SDK use `new FormData`
 // @ts-ignore
-global.FormData = formDataNode
+global.FormData = formData
+// Polyfill Blob because SDK needs use `new Blob`
+// @ts-ignore
+global.Blob = fetchBlob
 
 // Load environment variables from .env file
 dotenv()
@@ -70,25 +80,38 @@ const PRESETS = {
   // See https://github.com/Parisson/TimeSide/issues/200
   // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
   // FIXME: flac is re-encoded when loading player on youtbe items
+  // This makes the flacAubio preset useless here
   // See https://github.com/Parisson/TimeSide/issues/205
   flacAubio: '/timeside/api/presets/d7df195a-f15e-4e1b-9678-8f64d379ac42/'
 }
 
 const PROVIDERS = {
   YOUTUBE: '/timeside/api/providers/4f239dd8-c6fe-4888-b131-445b712f2b15/',
+  // FIXME: Deezer items fails to process (Error 500 when downloading audio after import)
+  // See https://github.com/Parisson/TimeSide/issues/206
   DEEZER: '/timeside/api/providers/32dd516a-5759-43fd-bc95-3d08eebee196/'
 }
 
 // getProviderUri('https://www.youtube.com/watch?v=UBPI95GIbGg')
 // getProviderUri('http://www.deezer.com/track/4763165')
 function getProviderUrl(sourceUrl: string) {
-  const parsed = new URL(sourceUrl)
+  const parsed = (() => {
+    try {
+      const url = new URL(sourceUrl)
+      return url
+    } catch (e) {
+      return undefined
+    }
+  })()
+  if (parsed === undefined) {
+    return undefined
+  }
   if (parsed.hostname === 'www.youtube.com') {
     return PROVIDERS.YOUTUBE
   } else if (parsed.hostname === 'www.deezer.com') {
     return PROVIDERS.DEEZER
   }
-  throw new Error('Unknown URL type (excpected deezer or youtube URL)')
+  return undefined
 }
 
 function compareArray (a: string[], b: string[]): boolean {
@@ -151,34 +174,83 @@ function sleep(ms: number) {
 }
 
 async function main() {
-  const wasabiSelection = await getOrCreateWasabiSelection()
-  console.log(`[${new Date().toISOString()}] WASABI Selection: ${wasabiSelection.uuid}`)
+  const importFile = process.argv[2]
+  if (!importFile) {
+    console.error('Missing required input parameter.\nExample "npm run start samples/youtube.json"')
+    return
+  }
+  const importFileURL = new URL(importFile, `file:///${process.cwd()}/`)
 
-  const wasabiExperience = await getOrCreateWasabiExperience()
-  console.log(`[${new Date().toISOString()}] WASABI Experience: ${wasabiExperience.uuid}`)
-
-  const file = await fsPromises.readFile('input.json')
+  const file = await fsPromises.readFile(importFileURL)
   const stations: Station[] = JSON.parse(file.toString())
 
   if (stations.length === 0) {
-    console.log('Unexpected empty station array (input.json). Leaving now')
+    logger.error(`Unexpected empty station array (${importFile}). Leaving now`)
     return
   }
 
-  console.log(`[${new Date().toISOString()}] Parsed ${stations.length} items. Importing...`)
+  const wasabiSelection = await getOrCreateWasabiSelection()
+  logger.info(`WASABI Selection: ${wasabiSelection.uuid}`)
 
-  // Create an array of promises to run tasks concurrently
-  const promises = stations.map(async (station) => {
-    // Check station and throws if it fails
+  const wasabiExperience = await getOrCreateWasabiExperience()
+  logger.info(`WASABI Experience: ${wasabiExperience.uuid}`)
+
+  const parsedStationsPromises = stations.map(async station => {
+    // Check stations and throws if it fails
     validateStation(station)
 
+    let itemSource: Item = {}
+
+    const isHttpSource = /^https?:\/\//.test(station.url)
+    const provider = getProviderUrl(station.url)
+    if (isHttpSource && provider) {
+      // Create item with provider (Youtube / Deezer)
+      itemSource = {
+        externalUri: station.url,
+        provider
+      }
+    } else if (isHttpSource) {
+      // Create item with externalUri
+      itemSource = {
+        sourceUrl: station.url
+      }
+    } else {
+      // Get file path relative to the import file location (input.json)
+      const importDirURL = url.pathToFileURL(path.dirname(url.fileURLToPath(importFileURL)))
+      const audioFileURL = new URL(station.url, `${importDirURL}/`)
+
+      // Check file exist and is readable
+      const stat = await fsPromises.stat(audioFileURL)
+      if (!stat.isFile()) {
+        logger.error(`${audioFileURL} is not a file`)
+        return
+      }
+
+      itemSource = {
+        // Using fs.createReadStream as we are using `form-data` package
+        // which is not a standard implementation of FormData
+        sourceFile: fs.createReadStream(audioFileURL) as unknown as Blob
+      }
+    }
+
+    return {
+      ...station,
+      source: itemSource
+    }
+  })
+
+  const parsedStations = await Promise.all(parsedStationsPromises)
+
+  logger.info(`Parsed ${stations.length} items. Importing...`)
+
+  // Create an array of promises to run tasks concurrently
+  const promises = parsedStations.map(async (station) => {
     // Create item
     const item = await api.createItem({
       item: {
         title: station.title,
         description: `Music from ${station.name} - ${station.albumTitle}`,
-        externalUri: station.url,
-        provider: getProviderUrl(station.url)
+        ...station.source
       }
     })
 
@@ -202,10 +274,16 @@ async function main() {
 
     const t0 = performance.now()
 
-    console.log(`[${new Date().toISOString()}] "${station.title}" - Task created: ${task.uuid}`)
+    logger.info(`"${station.title}" - Task created: ${task.uuid}`)
 
     // Wait until all task is done
-    const fibonacci = [ 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233 ]
+    // Variant of fibonnaci used for waiting
+    const fibonacci = [
+      1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89,
+      144, 144, 144, 144, 233, 233, 233, 233, 233,
+      377, 377, 377, 377, 377, 377, 377, 377, 377,
+    ]
+    const maxIteration = fibonacci.length - 1
     let isDone = false
     let iteration = 0
     let lastTask: Task
@@ -213,38 +291,27 @@ async function main() {
       lastTask = await api.retrieveTask({ uuid: task.uuid })
       isDone = lastTask.status === TaskStatus.Done
 
-      // We could alternatively wait for every results
-      // for this item to be processed
-      // But this would raise issues for concurrent imports
-
-      // const results = await api.listResults({ itemUuid: item.uuid })
-      // const undoneResults = results.filter((r) => r.status !== ResultStatus.Done)
-      // if (undoneResults.length === 0) {
-      //   console.log(`${results.length} results successfully processed`)
-      //   isDone = true
-      // }
-
-      iteration++
       await sleep(fibonacci[iteration] * 1000)
-    } while (!isDone && iteration < 10)
-      if (iteration === 10 && !isDone) {
-        console.error(`Unable to get result after ${iteration} iterations`)
+      iteration++
+    } while (!isDone && iteration <= maxIteration)
+      if (iteration === maxIteration && !isDone) {
+        logger.warning(`"${station.title} - Unable to get result after ${iteration} iteration for task "${task.uuid}"`)
         return
       }
 
     const t1 = performance.now()
     const taskRuntime = Math.round(t1 - t0) // in milliseconds
 
-    console.log(`[${new Date().toISOString()}] "${station.title}" - Task done (${taskRuntime}ms) : ${task.uuid}`)
-    console.log(`[${new Date().toISOString()}] "${station.title}" - Player URL: https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`)
+    const playerURL = `https://ircam-web.github.io/timeside-player/#/item/${item.uuid}`
+
+    logger.info(`"${station.title}" - Task done (${taskRuntime}ms) : ${task.uuid}`)
+    logger.info(`"${station.title}" - Player URL: ${playerURL}`)
   })
 
   // Wait for all promises to resolve
   await Promise.all(promises)
 
-  console.log(`[${new Date().toISOString()}] Created ${stations.length} items`)
-  // You may want to list items
-  // console.log(await api.listItems({}))
+  logger.info(`Created ${stations.length} items`)
 }
 
 main()
