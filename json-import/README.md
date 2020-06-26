@@ -10,7 +10,7 @@ This tool aims to import files from JSON files.
 ### Install node dependencies
 
 ```
-npm run install
+npm install
 ```
 
 ### Configure your environment variables
