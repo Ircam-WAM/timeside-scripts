@@ -2,6 +2,17 @@
 
 This tool aims to import files from JSON files.
 
+### Requirements
+
+- Credentials for Timeside API
+- Node.JS (tested on v13.14 but may work on previous versions)
+
+### Install node dependencies
+
+```
+npm run install
+```
+
 ### Configure your environment variables
 
 First, you have to configure environment variables with your Timeside credentials.
