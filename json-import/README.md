@@ -6,7 +6,7 @@ This tool aims to import files from JSON files.
 
 - Credentials for Timeside API
 - Node.JS (tested on v13.14 but may work on previous versions)
-- GIT LFS
+- [GIT LFS](https://github.com/git-lfs/git-lfs/wiki/Installation)
 
 ### Install node dependencies
 
