@@ -82,7 +82,7 @@ const PRESETS = {
   // FIXME: flac is re-encoded when loading player on youtbe items
   // This makes the flacAubio preset useless here
   // See https://github.com/Parisson/TimeSide/issues/205
-  flacAubio: '/timeside/api/presets/d7df195a-f15e-4e1b-9678-8f64d379ac42/'
+  flacAubio: '/timeside/api/presets/4e34df71-0878-4772-a925-190778d475a5/'
 }
 
 const PROVIDERS = {
