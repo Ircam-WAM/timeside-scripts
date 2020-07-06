@@ -79,22 +79,18 @@ const PRESETS = {
   // FIXME: spectrogram is broken on the API
   // See https://github.com/Parisson/TimeSide/issues/200
   // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
-  // FIXME: flac is re-encoded when loading player on youtbe items
-  // This makes the flacAubio preset useless here
-  // See https://github.com/Parisson/TimeSide/issues/205
   flacAubio: '/timeside/api/presets/4e34df71-0878-4772-a925-190778d475a5/'
 }
 
 const PROVIDERS = {
   YOUTUBE: '/timeside/api/providers/4f239dd8-c6fe-4888-b131-445b712f2b15/',
-  // FIXME: Deezer items fails to process (Error 500 when downloading audio after import)
-  // See https://github.com/Parisson/TimeSide/issues/206
   DEEZER: '/timeside/api/providers/32dd516a-5759-43fd-bc95-3d08eebee196/'
 }
 
+// Usage example :
 // getProviderUri('https://www.youtube.com/watch?v=UBPI95GIbGg')
 // getProviderUri('http://www.deezer.com/track/4763165')
-function getProviderUrl(sourceUrl: string) {
+function getProviderUrl(sourceUrl: string): string | undefined {
   const parsed = (() => {
     try {
       const url = new URL(sourceUrl)
