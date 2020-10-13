@@ -10,17 +10,17 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^14.0.13",
+    "@types/node": "^14.11.8",
     "ts-node": "^8.10.2",
-    "typescript": "^3.9.5"
+    "typescript": "^3.9.7"
   },
   "dependencies": {
     "@ircam/timeside-sdk": "^2.4.0",
     "@types/dotenv": "^8.2.0",
     "@types/form-data": "^2.5.0",
-    "cross-fetch": "^3.0.5",
+    "cross-fetch": "^3.0.6",
     "dotenv": "^8.2.0",
-    "fetch-blob": "^2.0.1",
+    "fetch-blob": "^2.1.1",
     "form-data": "^3.0.0",
     "winston": "^3.3.3"
   }
