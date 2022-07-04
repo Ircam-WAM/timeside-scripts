@@ -118,28 +118,10 @@ const init = async function (api: TimesideApi) {
 
     logger.info(`"${station.title}" - Task created: ${task.uuid}`)
 
-    // Wait until all task is done
-    // Variant of fibonnaci used for waiting
-    const fibonacci = [
-      1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89,
-      144, 144, 144, 144, 233, 233, 233, 233, 233,
-      377, 377, 377, 377, 377, 377, 377, 377, 377,
-    ]
-    const maxIteration = fibonacci.length - 1
-    let isDone = false
-    let iteration = 0
-    let lastTask: Task
-    do {
-      lastTask = await api.retrieveTask({ uuid: task.uuid })
-      isDone = lastTask.status === TaskStatus.Done
-
-      await sleep(fibonacci[iteration] * 1000)
-      iteration++
-    } while (!isDone && iteration <= maxIteration)
-      if (iteration === maxIteration && !isDone) {
-        logger.warning(`"${station.title} - Unable to get result after ${iteration} iteration for task "${task.uuid}"`)
-        return
-      }
+    let lastTask = await api.retrieveTask({ uuid: task.uuid }).catch((e) => {
+      console.error(e)
+      logger.warning(`"${station.title} - Unable to get result for task "${task.uuid}"`)
+    })
 
     const t1 = performance.now()
     const taskRuntime = Math.round(t1 - t0) // in milliseconds
