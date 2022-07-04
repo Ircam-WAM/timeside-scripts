@@ -10,7 +10,7 @@ config.load()
 
 const api = new TimesideApi(ServerSideConfiguration({
   // Use sandbox endpoint
-  basePath: 'https://ircam-wam.github.io',
+  basePath: 'https://timeside.ircam.fr',
   // Credentials (get from environment)
   username: config.mustGetEnv('TIMESIDE_API_USER'),
   password: config.mustGetEnv('TIMESIDE_API_PASS'),
