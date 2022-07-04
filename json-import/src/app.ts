@@ -96,39 +96,8 @@ const init = async function (api: TimesideApi) {
       }
     })
 
-    // Add created item to WASABI Selection
-    const updatedSelection = await api.partialUpdateSelection({
-      uuid: wasabiSelection.uuid,
-      selection: {
-        items: [ `/timeside/api/items/${item.uuid}/` ]
-      }
-    })
-
-    // Create task
-    const task = await api.createTask({
-      task: {
-        experience: `/timeside/api/experiences/${wasabiExperience.uuid}/`,
-        selection: `/timeside/api/selections/${updatedSelection.uuid}/`,
-        item: `/timeside/api/items/${item.uuid}/`,
-        status: TaskStatus.Pending
-      }
-    })
-
-    const t0 = performance.now()
-
-    logger.info(`"${station.title}" - Task created: ${task.uuid}`)
-
-    let lastTask = await api.retrieveTask({ uuid: task.uuid }).catch((e) => {
-      console.error(e)
-      logger.warning(`"${station.title} - Unable to get result for task "${task.uuid}"`)
-    })
-
-    const t1 = performance.now()
-    const taskRuntime = Math.round(t1 - t0) // in milliseconds
-
     const playerURL = `https://ircam-wam.github.io/timeside-player/#/item/${item.uuid}`
 
-    logger.info(`"${station.title}" - Task done (${taskRuntime}ms) : ${task.uuid}`)
     logger.info(`"${station.title}" - Player URL: ${playerURL}`)
   })
 
