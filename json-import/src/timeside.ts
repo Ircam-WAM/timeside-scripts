@@ -2,6 +2,13 @@ import { TimesideApi, Selection, Experience  } from '@ircam/timeside-sdk';
 import { compareArray } from './helpers'
 
 // Defined from ./input.json
+interface YoutubeLink {
+  id: string;
+  url?: string;
+  title?: string;
+  name?: string;
+  albumTitle?: string;
+}
 interface Station {
   title: string;
   url: string;
@@ -116,4 +123,4 @@ async function getOrCreateWasabiExperience (api: TimesideApi): Promise<Experienc
 }
 
 
-export { Station, validateStation, PRESETS, PROVIDERS, getProviderUrl, getOrCreateWasabiSelection, getOrCreateWasabiExperience }
+export { YoutubeLink, Station, validateStation, PRESETS, PROVIDERS, getProviderUrl, getOrCreateWasabiSelection, getOrCreateWasabiExperience }
