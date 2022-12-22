@@ -20,10 +20,10 @@ const init = async function (api: TimesideApi) {
   const importFileURL = new URL(importFile, `file:///${process.cwd()}/`)
 
   const file = await fsPromises.readFile(importFileURL)
-  const stations: timeside.Station[] = JSON.parse(file.toString())
 
-  if (stations.length === 0) {
-    logger.error(`Unexpected empty station array (${importFile}). Leaving now`)
+  const links: timeside.YoutubeLink[] = JSON.parse(file.toString())
+  if (links.length === 0) {
+    logger.error(`Unexpected empty links array (${importFile}). Leaving now`)
     return
   }
 
@@ -33,29 +33,30 @@ const init = async function (api: TimesideApi) {
   const wasabiExperience = await timeside.getOrCreateWasabiExperience(api)
   logger.info(`WASABI Experience: ${wasabiExperience.uuid}`)
 
-  const parsedStationsPromises = stations.map(async station => {
-    // Check stations and throws if it fails
-    timeside.validateStation(station)
+  const parsedLinksPromises = links.map(async youtubeLink => {
+    // Check ids and throws if it fails
+    timeside.validateYoutubeLink(youtubeLink)
 
     let itemSource: Item = {}
 
-    const isHttpSource = /^https?:\/\//.test(station.url)
-    const provider = timeside.getProviderUrl(station.url)
+    const isHttpSource = /^https?:\/\//.test(youtubeLink.url)
+    const provider = timeside.getProviderUrl(youtubeLink.url)
+
     if (isHttpSource && provider) {
       // Create item with provider (Youtube / Deezer)
       itemSource = {
-        externalUri: station.url,
+        externalUri: youtubeLink.url,
         provider
       }
     } else if (isHttpSource) {
       // Create item with externalUri
       itemSource = {
-        sourceUrl: station.url
+        sourceUrl: youtubeLink.url
       }
     } else {
       // Get file path relative to the import file location (input.json)
       const importDirURL = url.pathToFileURL(path.dirname(url.fileURLToPath(importFileURL)))
-      const audioFileURL = new URL(station.url, `${importDirURL}/`)
+      const audioFileURL = new URL(youtubeLink.url, `${importDirURL}/`)
 
       // Check file exist and is readable
       const stat = await fsPromises.stat(audioFileURL)
@@ -72,14 +73,19 @@ const init = async function (api: TimesideApi) {
     }
 
     return {
-      ...station,
+      ...youtubeLink,
       source: itemSource
     }
   })
 
-  const parsedStations = await Promise.all(parsedStationsPromises)
+  // const parsedStations = await Promise.all(parsedStationsPromises)
+  const parsedLinks = await Promise.all(parsedLinksPromises)
 
-  logger.info(`Parsed ${stations.length} items. Importing...`)
+  // logger.info(`Parsed ${stations.length} items. Importing...`)
+  logger.info(`Parsed ${links.length} items. Importing...`)
+
+  const promises = parsedLinks.map(async (link) => {
+
 
   // Create an array of promises to run tasks concurrently
   const promises = parsedStations.map(async (station) => {
