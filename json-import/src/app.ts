@@ -1,16 +1,12 @@
 import {
   TimesideApi,
   Item,
-  TaskStatus,
-  Task,
 } from '@ircam/timeside-sdk'
 
 import * as timeside from './timeside'
-import { sleep } from './helpers'
 import logger from './logger'
 
 // Node standard library imports
-import { performance } from 'perf_hooks'
 import fs, { promises as fsPromises } from 'fs'
 import url from 'url'
 import path from 'path'
