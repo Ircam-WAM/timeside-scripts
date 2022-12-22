@@ -9,6 +9,27 @@ interface YoutubeLink {
   name?: string;
   albumTitle?: string;
 }
+
+const validateYoutubeLink = function validateYoutubeLink (youtube_link: YoutubeLink) {
+  if (!youtube_link.id && !youtube_link.url) {
+    throw new Error(`Invalid youtube link: Empty id: ${JSON.stringify(youtube_link)}`)
+  } else if (!youtube_link.id && youtube_link.url) {
+    if (youtube_link.url.includes("watch?v=")) {
+      youtube_link.id = youtube_link.url.split("watch?v=")[1]
+    } else if (youtube_link.url.includes("youtu.be")) {
+      youtube_link.id = youtube_link.url.split("youtu.be/")[1]
+    } else {
+      throw new Error(`Invalid youtube link: Empty id: ${JSON.stringify(youtube_link)}`)
+    }
+  }
+
+  if (!youtube_link.url) {
+    youtube_link.url = "https://www.youtube.com/watch?v=" + youtube_link.id
+  } else if (youtube_link.url.includes("youtu.be")) {
+    youtube_link.url = "https://www.youtube.com/watch?v=" + youtube_link.id
+  }
+}
+
 interface Station {
   title: string;
   url: string;
@@ -123,4 +144,4 @@ async function getOrCreateWasabiExperience (api: TimesideApi): Promise<Experienc
 }
 
 
-export { YoutubeLink, Station, validateStation, PRESETS, PROVIDERS, getProviderUrl, getOrCreateWasabiSelection, getOrCreateWasabiExperience }
+export { YoutubeLink, validateYoutubeLink, Station, validateStation, PRESETS, PROVIDERS, getProviderUrl, getOrCreateWasabiSelection, getOrCreateWasabiExperience }
