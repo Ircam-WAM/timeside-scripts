@@ -11,6 +11,8 @@ import fs, { promises as fsPromises } from 'fs'
 import url from 'url'
 import path from 'path'
 
+import ytdl from 'ytdl-core'
+
 const init = async function (api: TimesideApi) {
   const importFile = process.argv[2]
   if (!importFile) {
@@ -86,27 +88,26 @@ const init = async function (api: TimesideApi) {
 
   const promises = parsedLinks.map(async (link) => {
 
+    const ytData = await ytdl.getInfo(link.url)
 
-  // Create an array of promises to run tasks concurrently
-  const promises = parsedStations.map(async (station) => {
     // Create item
     const item = await api.createItem({
       item: {
-        title: station.title,
-        description: `Music from ${station.name} - ${station.albumTitle}`,
-        ...station.source
+        title: link.title ? link.title : ytData.videoDetails.title,
+        description: link.name && link.albumTitle ? `Music from ${link.name} - ${link.albumTitle}` : '',
+        ...link.source
       }
     })
 
     const playerURL = `https://ircam-wam.github.io/timeside-player/#/item/${item.uuid}`
 
-    logger.info(`"${station.title}" - Player URL: ${playerURL}`)
+    logger.info(`Youtube link ID: "${link.id}" - Player URL: ${playerURL}`)
   })
 
   // Wait for all promises to resolve
   await Promise.all(promises)
 
-  logger.info(`Created ${stations.length} items`)
+  logger.info(`Created ${links.length} items`)
 }
 
 export default init
