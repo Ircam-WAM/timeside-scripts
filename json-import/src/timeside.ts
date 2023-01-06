@@ -54,20 +54,20 @@ const validateStation = function validateStation (station: Station) {
 
 // Hardcoded uuid / hyperlinks
 const PRESETS = {
-  waveformCentroid: '/timeside/api/presets/738a81fc-0a13-45d5-8d6a-3a6fb18d6cb1/',
-  spectralCentroid: '/timeside/api/presets/b8bc895c-2e44-490b-85d9-5722b1a30950/',
-  spectrogramLog: '/timeside/api/presets/17fcf229-d8cf-4d05-a80c-13161ec04646/'
-  // aubioPitch: '/timeside/api/presets/662b3fc8-77ce-4241-80a8-f68e32dd9950/',
-  // meanDcShift: '/timeside/api/presets/b750a952-0e4f-44e2-a548-5244a94af5b0/',
+  waveformCentroid: '/api/presets/738a81fc-0a13-45d5-8d6a-3a6fb18d6cb1/',
+  spectralCentroid: '/api/presets/b8bc895c-2e44-490b-85d9-5722b1a30950/',
+  spectrogramLog: '/api/presets/17fcf229-d8cf-4d05-a80c-13161ec04646/'
+  // aubioPitch: '/api/presets/662b3fc8-77ce-4241-80a8-f68e32dd9950/',
+  // meanDcShift: '/api/presets/b750a952-0e4f-44e2-a548-5244a94af5b0/',
   // FIXME: spectrogram is broken on the API
   // See https://github.com/Parisson/TimeSide/issues/200
-  // spectrogram: '/timeside/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
-  // flacAubio: '/timeside/api/presets/b6ce08dd-1ba0-467c-8a07-adfd79aee00f/'
+  // spectrogram: '/api/presets/3a5ea98d-ac74-4658-b649-ac7d0ef6f052/',
+  // flacAubio: '/api/presets/b6ce08dd-1ba0-467c-8a07-adfd79aee00f/'
 }
 
 const PROVIDERS = {
-  YOUTUBE: '/timeside/api/providers/e011cca7-a0b9-45cc-9b31-fc1cbf8f54f5/',
-  DEEZER: '/timeside/api/providers/ee6f0e6a-bc3d-4b8d-9b24-2c02b1e823ec/'
+  YOUTUBE: '/api/providers/e011cca7-a0b9-45cc-9b31-fc1cbf8f54f5/',
+  DEEZER: '/api/providers/ee6f0e6a-bc3d-4b8d-9b24-2c02b1e823ec/'
 }
 
 // Usage example :

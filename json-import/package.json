@@ -15,7 +15,7 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "@ircam/timeside-sdk": "^2.4.0",
+    "@ircam/timeside-sdk": "^2.6.1",
     "@types/dotenv": "^8.2.0",
     "@types/form-data": "^2.5.0",
     "cross-fetch": "^3.0.6",
