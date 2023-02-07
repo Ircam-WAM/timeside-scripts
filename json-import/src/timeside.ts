@@ -66,8 +66,8 @@ const PRESETS = {
 }
 
 const PROVIDERS = {
-  YOUTUBE: '/api/providers/e011cca7-a0b9-45cc-9b31-fc1cbf8f54f5/',
-  DEEZER: '/api/providers/ee6f0e6a-bc3d-4b8d-9b24-2c02b1e823ec/'
+  YOUTUBE: '/api/providers/13bce806-7d23-404d-b79e-e2234b7567c4/',
+  DEEZER: '/api/providers/93aca979-a623-46fe-8bb1-03813f4c4c1f/'
 }
 
 // Usage example :
