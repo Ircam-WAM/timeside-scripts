@@ -21,7 +21,7 @@
     "cross-fetch": "^3.0.6",
     "dotenv": "^8.2.0",
     "fetch-blob": "^2.1.1",
-    "form-data": "^3.0.0",
+    "form-data": "^3.0.4",
     "winston": "^3.3.3",
     "ytdl-core": "^4.11.2"
   }
